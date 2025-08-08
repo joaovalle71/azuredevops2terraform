@@ -1,0 +1,62 @@
+name: Executar Script Python Self-Hosted com setup-python
+
+on:
+  workflow_dispatch:
+    inputs:
+      collection:
+        description: 'URL da coleção do Azure DevOps'
+        required: true
+        default: 'https://dev.azure.com/vtaldevops'
+      project:
+        description: 'Nome do projeto'
+        required: true
+        default: ''
+      repos:
+        description: 'Nome do repositório'
+        required: true
+        default: ''
+      debug:
+        description: 'Debug?'
+        required: true
+        type: boolean
+        default: false
+        
+jobs:
+  run-python-script:
+    runs-on: ubuntu-latest
+    # runs-on: self-hosted # Usa o seu agente self-hosted
+    env:
+      PYTHON_PATH: 'python'
+      SYSTEM_COLLECTIONURI: ${{ github.event.inputs.collection }}
+      PRJ_ID: ${{ github.event.inputs.project }}
+      REPOS: ${{ github.event.inputs.repos }}
+      DEBUG: ${{ github.event.inputs.debug }}
+      ACTIONS_RUNNER_DEBUG: ${{ github.event.inputs.debug }}
+      ACTIONS_STEP_DEBUG: ${{ github.event.inputs.debug }}
+      ACTIONS_RUNNER_HTTPTRACE: ${{ github.event.inputs.debug }}
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Executar script Python (inline)
+        run: |
+          set +e
+          ${PYTHON_PATH} --version
+          ${PYTHON_PATH} -m pip install --upgrade pip
+
+      - name: Extracao Azure Projeto
+        if: ${{ success() }}
+        run: |
+          ${PYTHON_PATH} extract_azure_devops_api_data.py "${SYSTEM_COLLECTIONURI}_apis/projects/${PRJ_ID}?api-version=7.1&includeCapabilities=true"|${PYTHON_PATH} terraform_azure_devops_project.py
+
+      - name: Extracao Azure Repos
+        if: ${{ success() }}
+        run: |
+          ${PYTHON_PATH} extract_azure_devops_api_data.py "${SYSTEM_COLLECTIONURI}${PRJ_ID}/_apis/git/repositories?api-version=7.1"|jq "[.[]|select(.name==\"${REPOS}\")]"|${PYTHON_PATH} terraform_azure_devops_repos.py
+
+      - name: Extracao Azure Variablegroup
+        if: ${{ success() }}
+        run: |
+          ${PYTHON_PATH} extract_azure_devops_api_data.py "${SYSTEM_COLLECTIONURI}${PRJ_ID}/_apis/distributedtask/variablegroups?\$top=10000&api-version=7.1"|${PYTHON_PATH} terraform_azure_devops_variablegroups.py
+          
