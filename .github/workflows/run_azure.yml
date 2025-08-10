@@ -1,20 +1,48 @@
-name: Executar Script Python Self-Hosted com setup-python
+name: Run pipeline for Azure DevOps
 
 on:
   workflow_dispatch:
     inputs:
       collection:
-        description: 'URL da coleção do Azure DevOps'
+        description: 'Azure DevOps Collection'
         required: true
         default: 'https://dev.azure.com/vtaldevops'
-      project:
-        description: 'Nome do projeto'
+      source_project:
+        description: 'Source Project Name'
         required: true
         default: ''
-      repos:
-        description: 'Nome do repositório'
+      source_repo:
+        description: 'Source Repository Name'
         required: true
         default: ''
+      target_project:
+        description: 'Target Project Name'
+        required: true
+        default: ''
+      target_repo:
+        description: 'Target Repository Name'
+        required: true
+        default: ''
+      run_main:
+        description: 'Create main.tf?'
+        required: true
+        type: boolean
+        default: true
+      run_import:
+        description: 'Create import.tf?'
+        required: true
+        type: boolean
+        default: true
+      run_plan:
+        description: 'Run terraform plan?'
+        required: true
+        type: boolean
+        default: true
+      run_apply:
+        description: 'Run terraform apply?'
+        required: true
+        type: boolean
+        default: false
       debug:
         description: 'Debug?'
         required: true
@@ -28,22 +56,30 @@ jobs:
     env:
       PYTHON_PATH: 'python'
       SYSTEM_COLLECTIONURI: ${{ github.event.inputs.collection }}
-      PRJ_ID: ${{ github.event.inputs.project }}
-      REPOS: ${{ github.event.inputs.repos }}
+      SOURCE_PROJECT: ${{ github.event.inputs.source_project }}
+      SOURCE_REPO: ${{ github.event.inputs.source_repo }}
+      TARGET_PROJECT: ${{ github.event.inputs.target_project }}
+      TARGET_REPO: ${{ github.event.inputs.target_repo }}
+      RUN_MAIN: ${{ github.event.inputs.run_main }}
+      RUN_IMPORT: ${{ github.event.inputs.run_import }}
+      RUN_PLAN: ${{ github.event.inputs.run_plan }}
+      RUN_APPLY: ${{ github.event.inputs.run_apply }}
       DEBUG: ${{ github.event.inputs.debug }}
       ACTIONS_RUNNER_DEBUG: ${{ github.event.inputs.debug }}
       ACTIONS_STEP_DEBUG: ${{ github.event.inputs.debug }}
       ACTIONS_RUNNER_HTTPTRACE: ${{ github.event.inputs.debug }}
+      AZURE_DEVOPS_EXT_PAT: ${{ secrets.SEC_AZURE_DEVOPS_EXT_PAT }}
+      GITHUB_TOKEN: ${{ secrets.SEC_GITHUB_TOKEN }}
 
     steps:
       - name: Checkout do código
         uses: actions/checkout@v4
 
-      - name: Executar script Python (inline)
+      - name: Check Python (inline)
         run: |
           set +e
+          which ${PYTHON_PATH} 
           ${PYTHON_PATH} --version
-          ${PYTHON_PATH} -m pip install --upgrade pip
 
       - name: Extracao Azure Projeto
         if: ${{ success() }}
